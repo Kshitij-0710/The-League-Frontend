@@ -32,9 +32,8 @@ export function Home() {
                 Welcome To The League
               </Typography>
               <Typography variant="lead" color="white" className="opacity-80">
-                This is a simple example of a Landing Page you can build using
-                Material Tailwind. It features multiple components based on the
-                Tailwind CSS and Material Design by Google.
+              **Woxsen League** is the official sports facility portal of Woxsen University, offering access to top-tier courts, quality equipment, event schedules, and easy booking — all in one place.
+
               </Typography>
             </div>
           </div>
@@ -65,17 +64,13 @@ export function Home() {
                 className="mb-3 font-bold"
                 color="blue-gray"
               >
-                Working with us is a pleasure
+                Experience the spirit of sports like never before
               </Typography>
               <Typography className="mb-8 font-normal text-blue-gray-500">
-                Don't let your uses guess by attaching tooltips and popoves to
-                any element. Just make sure you enable them first via
-                JavaScript.
+              We offer the best and well-maintained sports courts on campus, built to match professional standards. From basketball to tennis, every facility is ready for peak performance.
                 <br />
                 <br />
-                The kit comes with three pre-built pages to help you get started
-                faster. You can change the text and images and you're good to
-                go. Just make sure you enable them first via JavaScript.
+                Our top-quality equipment ensures a seamless experience for all athletes. Whether you're training or competing, everything you need is just a few clicks away.
               </Typography>
               <Button variant="filled">read more</Button>
             </div>
@@ -84,7 +79,7 @@ export function Home() {
                 <CardHeader floated={false} className="relative h-56">
                   <img
                     alt="Card Image"
-                    src="/img/teamwork.png"
+                    src="https://pbs.twimg.com/media/GZLTUeuWEAAU-Wo?format=jpg&name=4096x4096"
                     className="h-full w-full"
                   />
                 </CardHeader>
@@ -98,41 +93,13 @@ export function Home() {
                     Top Notch Services
                   </Typography>
                   <Typography className="font-normal text-blue-gray-500">
-                    The Arctic Ocean freezes every winter and much of the
-                    sea-ice then thaws every summer, and that process will
-                    continue whatever happens.
+                  The Woxsen League website is a dedicated sports 
+                  platform offering event updates, schedules, team info, 
+                  and facility bookings to support all athletic activities on campus.
                   </Typography>
                 </CardBody>
               </Card>
             </div>
-          </div>
-        </div>
-      </section>
-      <section className="px-4 pt-20 pb-48">
-        <div className="container mx-auto">
-          <PageTitle section="Our Team" heading="Here are our heroes">
-            According to the National Oceanic and Atmospheric Administration,
-            Ted, Scambos, NSIDClead scentist, puts the potentially record
-            maximum.
-          </PageTitle>
-          <div className="mt-24 grid grid-cols-1 gap-12 gap-x-24 md:grid-cols-2 xl:grid-cols-4">
-            {teamData.map(({ img, name, position, socials }) => (
-              <TeamCard
-                key={name}
-                img={img}
-                name={name}
-                position={position}
-                socials={
-                  <div className="flex items-center gap-2">
-                    {socials.map(({ color, name }) => (
-                      <IconButton key={name} color={color} variant="text">
-                        <i className={`fa-brands text-xl fa-${name}`} />
-                      </IconButton>
-                    ))}
-                  </div>
-                }
-              />
-            ))}
           </div>
         </div>
       </section>
