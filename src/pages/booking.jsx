@@ -17,10 +17,7 @@ import {
   PlayIcon,
   ArrowRightIcon
 } from '@heroicons/react/24/outline';
-
-const API_CONFIG = {
-  BASE_URL: 'http://127.0.0.1:8000/api/',
-};
+import API_CONFIG from '@/configs/api_config';
 
 const getAuthHeaders = () => {
   const token = localStorage.getItem('accessToken');
