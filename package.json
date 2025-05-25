@@ -1,12 +1,12 @@
 {
-  "name": "material-tailwind-kit-react",
-  "private": true,
-  "version": "2.1.0",
-  "type": "module",
+  "name": "your-app-name",
+  "homepage": "https://Kshitij-0710.github.io/The-League-Frontend",
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "predeploy": "npm run build",
+    "deploy": "gh-pages -d dist"
   },
   "dependencies": {
     "@heroicons/react": "2.0.18",
@@ -21,6 +21,7 @@
     "@types/react-dom": "18.2.14",
     "@vitejs/plugin-react": "4.1.0",
     "autoprefixer": "10.4.16",
+    "gh-pages": "^6.3.0",
     "postcss": "8.4.31",
     "prettier": "3.0.3",
     "prettier-plugin-tailwindcss": "0.5.6",
