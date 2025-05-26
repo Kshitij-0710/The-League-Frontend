@@ -123,7 +123,7 @@ export function SignUp() {
 
   // API call for registration
   const registerUser = async (userData) => {
-    const response = await fetch(`${API_CONFIG.BASE_URL}users/register/`, {
+    const response = await fetch(`${API_CONFIG.BASE_URL}auth/register/`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
