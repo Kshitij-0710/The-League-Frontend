@@ -15,7 +15,8 @@ import {
   CheckCircleIcon,
   XCircleIcon,
   PlayIcon,
-  ArrowRightIcon
+  ArrowRightIcon,
+  MapPinIcon
 } from '@heroicons/react/24/outline';
 import API_CONFIG from '@/configs/api_config';
 
@@ -40,12 +41,15 @@ export default function Booking() {
   const [selectedSport, setSelectedSport] = useState('');
   const [selectedDate, setSelectedDate] = useState('');
   const [selectedTimeSlot, setSelectedTimeSlot] = useState('');
+  const [selectedCourt, setSelectedCourt] = useState('');
   const [availableSlots, setAvailableSlots] = useState({});
+  const [availableCourts, setAvailableCourts] = useState({});
   const [myBookings, setMyBookings] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [loadingSlots, setLoadingSlots] = useState(false);
+  const [loadingCourts, setLoadingCourts] = useState(false);
 
   // Sports data with icons and colors
   const SPORTS = [
@@ -98,9 +102,94 @@ export default function Booking() {
     { value: '17:00', label: '5:00 PM', period: 'evening' },
   ];
 
-  // Get minimum date (today)
-  const getMinDate = () => {
-    return new Date().toISOString().split('T')[0];
+  const COURTS = [
+    { value: 'court_1', label: 'Court 1', color: 'bg-blue-50 border-blue-200 hover:bg-blue-100' },
+    { value: 'court_2', label: 'Court 2', color: 'bg-green-50 border-green-200 hover:bg-green-100' },
+    { value: 'court_3', label: 'Court 3', color: 'bg-yellow-50 border-yellow-200 hover:bg-yellow-100' },
+    { value: 'court_4', label: 'Court 4', color: 'bg-purple-50 border-purple-200 hover:bg-purple-100' },
+    { value: 'court_5', label: 'Court 5', color: 'bg-pink-50 border-pink-200 hover:bg-pink-100' },
+    { value: 'court_6', label: 'Court 6', color: 'bg-indigo-50 border-indigo-200 hover:bg-indigo-100' },
+    { value: 'court_7', label: 'Court 7', color: 'bg-teal-50 border-teal-200 hover:bg-teal-100' },
+    { value: 'court_8', label: 'Court 8', color: 'bg-orange-50 border-orange-200 hover:bg-orange-100' },
+  ];
+
+  // Get date options (today and tomorrow)
+  const getDateOptions = () => {
+    const today = new Date();
+    const tomorrow = new Date();
+    tomorrow.setDate(today.getDate() + 1);
+    
+    return [
+      {
+        value: today.toISOString().split('T')[0],
+        label: 'Today',
+        date: today,
+        dayName: 'Today',
+        fullDate: today.toLocaleDateString('en-US', { 
+          weekday: 'long', 
+          month: 'long', 
+          day: 'numeric' 
+        })
+      },
+      {
+        value: tomorrow.toISOString().split('T')[0],
+        label: 'Tomorrow',
+        date: tomorrow,
+        dayName: 'Tomorrow',
+        fullDate: tomorrow.toLocaleDateString('en-US', { 
+          weekday: 'long', 
+          month: 'long', 
+          day: 'numeric' 
+        })
+      }
+    ];
+  };
+
+  // Handle step navigation
+  const handleStepClick = (targetStep) => {
+    // Allow going back to any completed step
+    if (targetStep < step) {
+      setStep(targetStep);
+      // Clear selections for steps ahead of target
+      if (targetStep <= 1) {
+        setSelectedSport('');
+        setSelectedDate('');
+        setSelectedCourt('');
+        setSelectedTimeSlot('');
+      } else if (targetStep <= 2) {
+        setSelectedDate('');
+        setSelectedCourt('');
+        setSelectedTimeSlot('');
+      } else if (targetStep <= 3) {
+        setSelectedCourt('');
+        setSelectedTimeSlot('');
+      } else if (targetStep <= 4) {
+        setSelectedTimeSlot('');
+      }
+    }
+    // Allow going forward only if previous steps are completed
+    else if (targetStep > step) {
+      if (step === 1 && selectedSport && targetStep === 2) {
+        setStep(2);
+      } else if (step === 2 && selectedDate && targetStep === 3) {
+        setStep(3);
+      } else if (step === 3 && selectedCourt && targetStep === 4) {
+        setStep(4);
+      }
+    }
+  };
+
+  // Check if a step is accessible
+  const isStepAccessible = (stepNum) => {
+    if (stepNum <= step) return true; // Current or previous steps
+    if (stepNum === step + 1) {
+      // Next step is accessible if current step is completed
+      if (step === 1 && selectedSport) return true;
+      if (step === 2 && selectedDate) return true;
+      if (step === 3 && selectedCourt) return true;
+      if (step === 4 && selectedTimeSlot) return true;
+    }
+    return false;
   };
 
   // Fetch user's bookings
@@ -131,9 +220,54 @@ export default function Booking() {
     }
   };
 
-  // Fetch available time slots
-  const fetchAvailableSlots = async (sport, date) => {
+  // Fetch available courts (for sport + date)
+  const fetchAvailableCourts = async (sport, date) => {
     if (!sport || !date) return;
+    
+    // Check authentication first
+    if (!isAuthenticated()) {
+      setError('Please sign in to view available courts');
+      return;
+    }
+    
+    setLoadingCourts(true);
+    try {
+      // For this API, we'll get all courts and their general availability for the day
+      // We'll need to modify this to show courts available for the whole day
+      const response = await fetch(
+        `${API_CONFIG.BASE_URL}bookings/available_timeslots/?sport=${sport}&date=${date}`,
+        { headers: getAuthHeaders() }
+      );
+      
+      if (response.status === 401) {
+        localStorage.clear();
+        setError('Session expired. Please sign in again.');
+        return;
+      }
+      
+      if (response.ok) {
+        const data = await response.json();
+        // For court selection, we'll show all courts and let users pick
+        // The availability will be shown in time slots
+        setAvailableCourts({ available_courts: COURTS.reduce((acc, court) => {
+          acc[court.value] = court.label;
+          return acc;
+        }, {}), total_courts: 8, available_count: 8 });
+      } else {
+        const errorData = await response.json();
+        setError(errorData.detail || 'Failed to fetch available courts');
+      }
+    } catch (err) {
+      console.error('Network error:', err);
+      setError('Network error while fetching courts');
+    } finally {
+      setLoadingCourts(false);
+    }
+  };
+
+  // Fetch available time slots (for sport + date + court)
+  const fetchAvailableSlots = async (sport, date, court) => {
+    if (!sport || !date || !court) return;
     
     // Check authentication first
     if (!isAuthenticated()) {
@@ -144,7 +278,7 @@ export default function Booking() {
     setLoadingSlots(true);
     try {
       const response = await fetch(
-        `${API_CONFIG.BASE_URL}bookings/available_timeslots/?sport=${sport}&date=${date}`,
+        `${API_CONFIG.BASE_URL}bookings/available_courts/?sport=${sport}&date=${date}&time_slot=9:00`,
         { headers: getAuthHeaders() }
       );
       
@@ -152,14 +286,30 @@ export default function Booking() {
         // Token expired or invalid
         localStorage.clear();
         setError('Session expired. Please sign in again.');
-        // Optionally redirect to login
-        // window.location.href = '/sign-in';
         return;
       }
       
       if (response.ok) {
-        const data = await response.json();
-        setAvailableSlots(data);
+        // We need to check each time slot for the selected court
+        const timeSlotAvailability = {};
+        
+        for (const slot of TIME_SLOTS) {
+          try {
+            const slotResponse = await fetch(
+              `${API_CONFIG.BASE_URL}bookings/available_courts/?sport=${sport}&date=${date}&time_slot=${slot.value}`,
+              { headers: getAuthHeaders() }
+            );
+            
+            if (slotResponse.ok) {
+              const slotData = await slotResponse.json();
+              timeSlotAvailability[slot.value] = slotData.available_courts && slotData.available_courts[court];
+            }
+          } catch (err) {
+            console.error('Error checking slot:', slot.value, err);
+          }
+        }
+        
+        setAvailableSlots(timeSlotAvailability);
       } else {
         const errorData = await response.json();
         setError(errorData.detail || 'Failed to fetch available slots');
@@ -183,6 +333,7 @@ export default function Booking() {
         headers: getAuthHeaders(),
         body: JSON.stringify({
           sport: selectedSport,
+          court: selectedCourt,
           time_slot: selectedTimeSlot,
           booking_date: selectedDate,
         }),
@@ -192,13 +343,14 @@ export default function Booking() {
 
       if (response.ok) {
         setSuccess('Booking confirmed successfully!');
-        setStep(4); // Go to confirmation step
+        setStep(5); // Go to confirmation step
         fetchMyBookings(); // Refresh bookings
         // Reset form
         setTimeout(() => {
           setSelectedSport('');
           setSelectedDate('');
           setSelectedTimeSlot('');
+          setSelectedCourt('');
           setStep(1);
           setSuccess('');
         }, 3000);
@@ -223,15 +375,23 @@ export default function Booking() {
     fetchMyBookings();
   }, []);
 
-  // Fetch slots when sport and date are selected
+  // Fetch courts when sport and date are selected
   useEffect(() => {
     if (selectedSport && selectedDate) {
-      fetchAvailableSlots(selectedSport, selectedDate);
+      fetchAvailableCourts(selectedSport, selectedDate);
     }
   }, [selectedSport, selectedDate]);
 
+  // Fetch time slots when sport, date, and court are selected
+  useEffect(() => {
+    if (selectedSport && selectedDate && selectedCourt) {
+      fetchAvailableSlots(selectedSport, selectedDate, selectedCourt);
+    }
+  }, [selectedSport, selectedDate, selectedCourt]);
+
   // Get selected sport details
   const selectedSportDetails = SPORTS.find(sport => sport.value === selectedSport);
+  const selectedCourtDetails = COURTS.find(court => court.value === selectedCourt);
 
   // Status badge colors
   const getStatusColor = (status) => {
@@ -252,7 +412,7 @@ export default function Booking() {
             Book Your Sports Session
           </Typography>
           <Typography variant="paragraph" className="text-gray-600">
-            Reserve your preferred time slot for your favorite sport
+            Reserve your preferred time slot and court for your favorite sport
           </Typography>
         </div>
 
@@ -271,25 +431,51 @@ export default function Booking() {
         {/* Progress Steps */}
         <div className="flex justify-center mb-8">
           <div className="flex items-center space-x-4">
-            {[1, 2, 3, 4].map((stepNum) => (
+            {[1, 2, 3, 4, 5].map((stepNum) => (
               <div key={stepNum} className="flex items-center">
-                <div className={`
-                  w-10 h-10 rounded-full flex items-center justify-center font-bold
-                  ${step >= stepNum 
-                    ? 'bg-[#EF495D] text-white' 
-                    : 'bg-gray-200 text-gray-500'
-                  }
-                `}>
+                <button
+                  onClick={() => handleStepClick(stepNum)}
+                  disabled={!isStepAccessible(stepNum)}
+                  className={`
+                    w-10 h-10 rounded-full flex items-center justify-center font-bold transition-all duration-300
+                    ${step >= stepNum 
+                      ? 'bg-[#EF495D] text-white shadow-md' 
+                      : isStepAccessible(stepNum)
+                      ? 'bg-gray-300 text-gray-600 hover:bg-gray-400 cursor-pointer'
+                      : 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                    }
+                    ${step === stepNum ? 'ring-4 ring-[#EF495D] ring-opacity-30 scale-110' : ''}
+                    ${isStepAccessible(stepNum) && step !== stepNum ? 'hover:scale-105' : ''}
+                  `}
+                >
                   {stepNum}
-                </div>
-                {stepNum < 4 && (
-                  <ArrowRightIcon className={`w-5 h-5 mx-2 ${
+                </button>
+                {stepNum < 5 && (
+                  <ArrowRightIcon className={`w-5 h-5 mx-2 transition-colors duration-300 ${
                     step > stepNum ? 'text-[#EF495D]' : 'text-gray-300'
                   }`} />
                 )}
               </div>
             ))}
           </div>
+        </div>
+
+        {/* Step Labels */}
+        <div className="flex justify-center mb-8">
+          <div className="flex space-x-4 text-sm text-gray-600">
+            <span className={step === 1 ? 'font-semibold text-[#EF495D]' : isStepAccessible(1) ? 'cursor-pointer hover:text-[#EF495D]' : ''}>Sport</span>
+            <span className={step === 2 ? 'font-semibold text-[#EF495D]' : isStepAccessible(2) ? 'cursor-pointer hover:text-[#EF495D]' : ''}>Date</span>
+            <span className={step === 3 ? 'font-semibold text-[#EF495D]' : isStepAccessible(3) ? 'cursor-pointer hover:text-[#EF495D]' : ''}>Court</span>
+            <span className={step === 4 ? 'font-semibold text-[#EF495D]' : isStepAccessible(4) ? 'cursor-pointer hover:text-[#EF495D]' : ''}>Time</span>
+            <span className={step === 5 ? 'font-semibold text-[#EF495D]' : isStepAccessible(5) ? 'cursor-pointer hover:text-[#EF495D]' : ''}>Confirm</span>
+          </div>
+        </div>
+
+        {/* Navigation Hint */}
+        <div className="text-center mb-6">
+          <Typography variant="small" className="text-gray-500">
+            Click on completed steps to navigate back and make changes
+          </Typography>
         </div>
 
         {/* Error/Success Alerts */}
@@ -382,17 +568,44 @@ export default function Booking() {
                       </div>
                     )}
                     
-                    <div className="max-w-md mx-auto">
-                      <Input
-                        type="date"
-                        label="Booking Date"
-                        value={selectedDate}
-                        onChange={(e) => setSelectedDate(e.target.value)}
-                        min={getMinDate()}
-                        className="!border-t-blue-gray-200 focus:!border-t-[#EF495D]"
-                        labelProps={{ className: "before:content-none after:content-none" }}
-                        icon={<CalendarDaysIcon className="w-5 h-5" />}
-                      />
+                    <Typography variant="h6" className="mb-6 text-gray-700 text-center">
+                      Choose your booking date
+                    </Typography>
+                    
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-2xl mx-auto">
+                      {getDateOptions().map((dateOption) => (
+                        <div
+                          key={dateOption.value}
+                          onClick={() => setSelectedDate(dateOption.value)}
+                          className={`
+                            p-6 rounded-xl border-2 cursor-pointer transition-all duration-300 text-center
+                            ${selectedDate === dateOption.value 
+                              ? 'border-[#EF495D] bg-red-50 shadow-lg scale-105' 
+                              : 'border-gray-200 bg-white hover:border-[#EF495D] hover:shadow-md hover:scale-102'
+                            }
+                          `}
+                        >
+                          <div className="text-3xl mb-3">
+                            {dateOption.label === 'Today' ? '📅' : '🗓️'}
+                          </div>
+                          <Typography variant="h5" className={`
+                            font-bold mb-2
+                            ${selectedDate === dateOption.value ? 'text-[#EF495D]' : 'text-gray-800'}
+                          `}>
+                            {dateOption.dayName}
+                          </Typography>
+                          <Typography variant="small" className="text-gray-600">
+                            {dateOption.fullDate}
+                          </Typography>
+                          <Typography variant="small" className="text-gray-500 mt-1">
+                            {dateOption.date.toLocaleDateString('en-US', { 
+                              month: 'short', 
+                              day: 'numeric',
+                              year: 'numeric' 
+                            })}
+                          </Typography>
+                        </div>
+                      ))}
                     </div>
                     
                     {selectedDate && (
@@ -402,19 +615,19 @@ export default function Booking() {
                           className="bg-[#EF495D] hover:bg-[#e63946] px-8 py-3"
                           size="lg"
                         >
-                          Choose Time Slot
+                          Choose Court
                         </Button>
                       </div>
                     )}
                   </div>
                 )}
 
-                {/* Step 3: Time Slot Selection */}
+                {/* Step 3: Court Selection */}
                 {step === 3 && (
                   <div>
                     <div className="flex items-center justify-between mb-6">
                       <Typography variant="h4" className="font-bold text-gray-800">
-                        Available Time Slots
+                        Select Court
                       </Typography>
                       <Button 
                         variant="text" 
@@ -426,7 +639,7 @@ export default function Booking() {
                     </div>
 
                     {/* Selected Info */}
-                    <div className="flex items-center justify-between mb-8 p-4 bg-gray-50 rounded-lg">
+                    <div className="mb-8 p-4 bg-gray-50 rounded-lg">
                       <div className="flex items-center">
                         <span className="text-2xl mr-3">{selectedSportDetails?.icon}</span>
                         <div>
@@ -445,11 +658,115 @@ export default function Booking() {
                       </div>
                     </div>
 
+                    {loadingCourts ? (
+                      <div className="text-center py-8">
+                        <Spinner className="h-8 w-8 text-[#EF495D]" />
+                        <Typography className="mt-2 text-gray-600">
+                          Loading available courts...
+                        </Typography>
+                      </div>
+                    ) : (
+                      <div>
+                        <Typography variant="h6" className="mb-4 text-gray-700 flex items-center">
+                          <MapPinIcon className="w-5 h-5 mr-2" />
+                          Choose Your Court
+                        </Typography>
+                        
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                          {COURTS.map((court) => {
+                            const isSelected = selectedCourt === court.value;
+                            
+                            return (
+                              <button
+                                key={court.value}
+                                onClick={() => setSelectedCourt(court.value)}
+                                className={`
+                                  p-6 rounded-xl border-2 transition-all duration-300 font-medium
+                                  ${isSelected 
+                                    ? 'border-[#EF495D] bg-[#EF495D] text-white shadow-lg scale-105' 
+                                    : `${court.color} border-2 hover:shadow-md hover:scale-102`
+                                  }
+                                `}
+                              >
+                                <div className="text-center">
+                                  <div className="text-2xl mb-2">🏟️</div>
+                                  <div className="font-semibold">{court.label}</div>
+                                  <div className="text-xs mt-1">
+                                    Click to select
+                                  </div>
+                                </div>
+                              </button>
+                            );
+                          })}
+                        </div>
+
+                        {selectedCourt && (
+                          <div className="mt-8 text-center">
+                            <Button 
+                              onClick={() => setStep(4)}
+                              className="bg-[#EF495D] hover:bg-[#e63946] px-8 py-3"
+                              size="lg"
+                            >
+                              Choose Time Slot
+                            </Button>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* Step 4: Time Slot Selection */}
+                {step === 4 && (
+                  <div>
+                    <div className="flex items-center justify-between mb-6">
+                      <Typography variant="h4" className="font-bold text-gray-800">
+                        Available Time Slots
+                      </Typography>
+                      <Button 
+                        variant="text" 
+                        onClick={() => setStep(3)}
+                        className="text-gray-600"
+                      >
+                        ← Back
+                      </Button>
+                    </div>
+
+                    {/* Selected Info */}
+                    <div className="mb-8 p-4 bg-gray-50 rounded-lg">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center">
+                          <span className="text-2xl mr-3">{selectedSportDetails?.icon}</span>
+                          <div>
+                            <Typography variant="h6" className="text-gray-700">
+                              {selectedSportDetails?.label}
+                            </Typography>
+                            <Typography variant="small" className="text-gray-500">
+                              {new Date(selectedDate).toLocaleDateString('en-US', { 
+                                weekday: 'long', 
+                                year: 'numeric', 
+                                month: 'long', 
+                                day: 'numeric' 
+                              })}
+                            </Typography>
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          <Typography variant="small" className="text-gray-500">
+                            Selected Court
+                          </Typography>
+                          <Typography variant="h6" className="text-[#EF495D] font-bold">
+                            {selectedCourtDetails?.label}
+                          </Typography>
+                        </div>
+                      </div>
+                    </div>
+
                     {loadingSlots ? (
                       <div className="text-center py-8">
                         <Spinner className="h-8 w-8 text-[#EF495D]" />
                         <Typography className="mt-2 text-gray-600">
-                          Loading available slots...
+                          Loading available time slots...
                         </Typography>
                       </div>
                     ) : (
@@ -586,8 +903,8 @@ export default function Booking() {
                   </div>
                 )}
 
-                {/* Step 4: Confirmation */}
-                {step === 4 && (
+                {/* Step 5: Confirmation */}
+                {step === 5 && (
                   <div className="text-center py-8">
                     <CheckCircleIcon className="w-16 h-16 text-green-500 mx-auto mb-4" />
                     <Typography variant="h4" className="font-bold text-gray-800 mb-2">
@@ -602,6 +919,10 @@ export default function Booking() {
                         <div className="flex justify-between">
                           <span className="font-medium">Sport:</span>
                           <span>{selectedSportDetails?.label}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="font-medium">Court:</span>
+                          <span>{selectedCourtDetails?.label}</span>
                         </div>
                         <div className="flex justify-between">
                           <span className="font-medium">Date:</span>
@@ -620,6 +941,7 @@ export default function Booking() {
                         setSelectedSport('');
                         setSelectedDate('');
                         setSelectedTimeSlot('');
+                        setSelectedCourt('');
                         setSuccess('');
                       }}
                       className="bg-[#EF495D] hover:bg-[#e63946]"
@@ -668,6 +990,12 @@ export default function Booking() {
                             <ClockIcon className="w-4 h-4 mr-2" />
                             {booking.time_slot_display}
                           </div>
+                          {booking.court_display && (
+                            <div className="flex items-center">
+                              <MapPinIcon className="w-4 h-4 mr-2" />
+                              {booking.court_display}
+                            </div>
+                          )}
                         </div>
                       </div>
                     ))}
